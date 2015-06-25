@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
-import sys, os, re, json, urllib2, audiotranscode,subprocess, shutil
+import sys, os, re, json, urllib2,subprocess, shutil
 from subprocess import Popen, PIPE, STDOUT
 import pafy
 from multiprocessing import Pool
@@ -14,81 +14,84 @@ sys.setdefaultencoding('UTF8')
 #test urls
 #url="https://www.youtube.com/playlist?list=EL1h7dE4-uBGs"
 #url="https://www.youtube.com/watch?v=h_At3vblkso&index=1&list=EL1h7dE4-uBGs"
-class Downloader:
-    def d(video):
-        return convert_file(download_file(video))
-    def download_file(video,tmp_dir='tmp/'):
+#
+def d(video,dest):
+    return convert_file(download_file(video),dest)
+def download_file(video,tmp_dir='tmp/'):
 
-        if isinstance(video,str) and type(video) is str:
-            video = pafy.new(video)
-        #elif isinstance(video,pafy):
-        #   video = video
-        #video.title=convert_filename(video.title)
-        bestaudio = video.getbestaudio()
-        f= bestaudio.download(filepath=tmp_dir)
-        print f
-        return f
-    #returns true or false depending if convergion succeded
-    def convert_file(filename,dest_dir='converted/',tmp_dir='tmp/',format='mp3',delete_tmp=False):
+    if isinstance(video,str) and type(video) is str:
+        video = pafy.new(video)
+    #elif isinstance(video,pafy):
+    #   video = video
+    #video.title=convert_filename(video.title)
+    bestaudio = video.getbestaudio()
+    f= bestaudio.download(filepath=tmp_dir)
+    print f
+    return f
+#returns true or false depending if convergion succeded
+def convert_file(filename,dest_dir='converted/',tmp_dir='tmp/',format='mp3',delete_tmp=False):
 
-        dest_name=dest_dir+os.path.splitext(str(os.path.basename(filename)))[0]+'.mp3'
+    dest_name=dest_dir+os.path.splitext(str(os.path.basename(filename)))[0]+'.mp3'
 
-        cmd="ffmpeg -i '"+filename+"'  '"+dest_name+"' "
-        sp=Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
-        out, err = sp.communicate()
+    cmd="ffmpeg -i '"+filename+"'  '"+dest_name+"' "
+    sp=Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=STDOUT, close_fds=True)
+    out, err = sp.communicate()
 
-        
-        if delete_tmp and not err:
-            os.remove(filename)
-        if err:
-            add_error(err)
-            os.rename(filename,dest_dir+os.path.basename(filename))
-            return filename
-        if out:
-            add_message(out)
-        return dest_name
-
-    def get_dir_list(dir_path):
-        root,dirs,files = os.walk(dir_path).next()#get listing of current directory
-        dirlist=[]
-        for i,file in enumerate(files):#rebuild files array with only the filename
-            dirlist.append(os.path.splitext(str(file))[0])
-        return dirlist
-
-    def add_error(msg):
-        errors.append(msg)
-
-    def add_message(msg):
-        messages.append(msg)
-
-    def print_errors():
-        for error in errors:
-            print "[Error] "+error
-
-
-    def print_messages():
-        for msg in messages:
-            print "[Alert] "+msg
-
-    def print_all():
-        print_errors()
-        print_messages()
-
-    def convert_filename(filename):
-        ok = re.compile(r'[^/]')#re-use of pafy filename generator
-
-        if os.name == "nt":
-            ok = re.compile(r'[^\\/:*?"<>|]')
-
-        filename = "".join(x if ok.match(x) else "_" for x in filename)
+    
+    if delete_tmp and not err:
+        os.remove(filename)
+    if err:
+        add_error(err)
+        os.rename(filename,dest_dir+os.path.basename(filename))
         return filename
+    if out:
+        add_message(out)
+    return dest_name
+
+def get_dir_list(dir_path):
+    root,dirs,files = os.walk(dir_path).next()#get listing of current directory
+    dirlist=[]
+    for i,file in enumerate(files):#rebuild files array with only the filename
+        dirlist.append(os.path.splitext(str(file))[0])
+    return dirlist
+
+def add_error(msg):
+    errors.append(msg)
+
+def add_message(msg):
+    messages.append(msg)
+
+def print_errors():
+    for error in errors:
+        print "[Error] "+error
 
 
-    def run(): # main function
+def print_messages():
+    for msg in messages:
+        print "[Alert] "+msg
 
+def print_all():
+    print_errors()
+    print_messages()
+
+def convert_filename(filename):
+    ok = re.compile(r'[^/]')#re-use of pafy filename generator
+
+    if os.name == "nt":
+        ok = re.compile(r'[^\\/:*?"<>|]')
+
+    filename = "".join(x if ok.match(x) else "_" for x in filename)
+    return filename
+
+class Downloader:
+    def __init__(self,url,folder="converted/"):
+        self.folder=folder
+        self.url=url
+        self.pool=Pool(processes=4)              # start 4 worker processes
         
-        pool = Pool(processes=4)              # start 4 worker processes
-        global result
+    def run(self): # main function
+        pool = self.pool
+        """
         if not debug:
             url=str(raw_input("Url of your video/playlist ?")) # get user input, for the url
         else:
@@ -98,10 +101,12 @@ class Downloader:
             dest_folder=str(raw_input("what foler should it be stored in ?")) # get the foler for the files to be stored in
         else:
             dest_folder="./tmp/"
-
-        if not os.path.exists(dest_folder): 
-            os.makedirs(dest_folder)#create directory for the storage of downloaded files
-        
+        """
+        if not os.path.exists(self.folder): 
+            os.makedirs(self.folder)#create directory for the storage of downloaded files
+        if not os.path.exists("tmp/"): 
+            os.makedirs("tmp/")#create directory for the storage of downloaded files
+            
         if "list" in url: # if its a playlist, we need to get all videos individually
             print "There is a playlist url, do you want to download it?"
             var = raw_input("y/n")
@@ -136,10 +141,20 @@ class Downloader:
                     else : 
                         add_message("The file "+ video.title +" is downloaded")
                         
-                        result = pool.apply_async(d, [video])    # evaluate "d(video)" asynchronously
+                        self.res_pool = pool.apply_async(d, [video,dest_folder])    # evaluate "d(video)" asynchronously
                 
             else:
-                exit(0)
+                if "v=" in url:
+                    video = pafy.new(url)   
+
+                    #print upload_dir_files
+                    if convert_filename(video.title) in get_dir_list(dest_folder): # check if the file doesnt already exists, if it doesnt dowload it
+                        errors.append("The file "+ video.title +" alredy exists, so we didnt dowload it again")
+                    else : 
+                        messages.append("The file "+ video.title +" is downloaded")
+                        d(video,dest_folder)
+                else:
+                    exit(0)
                     
                     
         else :  # its a normal video and we let pafy handle it
@@ -150,7 +165,7 @@ class Downloader:
                 errors.append("The file "+ video.title +" alredy exists, so we didnt dowload it again")
             else : 
                 messages.append("The file "+ video.title +" is downloaded")
-                convert_file(download_file(video))
+                d(video,dest_folder)
                 
                 
 
@@ -164,6 +179,6 @@ class Downloader:
     
 
 if __name__ == "__main__":
-    d=Downloader()
-    d.run()
+    dw=Downloader()
+    dw.run()
     exit(0)
