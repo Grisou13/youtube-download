@@ -88,6 +88,19 @@ class Downloader:
         self.folder=folder
         self.url=url
         self.pool=Pool(processes=4)              # start 4 worker processes
+        if not os.path.exists(self.folder): 
+            os.makedirs(self.folder)#create directory for the storage of downloaded files
+        if not os.path.exists("tmp/"): 
+            os.makedirs("tmp/")#create directory for the storage of downloaded files
+    def convert_filename(self,filename):
+        ok = re.compile(r'[^/]')#re-use of pafy filename generator
+
+        if os.name == "nt":
+            ok = re.compile(r'[^\\/:*?"<>|]')
+
+        filename = "".join(x if ok.match(x) else "_" for x in filename)
+        return filename
+    def ask(self,msg):
         
     def run(self): # main function
         pool = self.pool
@@ -102,10 +115,7 @@ class Downloader:
         else:
             dest_folder="./tmp/"
         """
-        if not os.path.exists(self.folder): 
-            os.makedirs(self.folder)#create directory for the storage of downloaded files
-        if not os.path.exists("tmp/"): 
-            os.makedirs("tmp/")#create directory for the storage of downloaded files
+        
             
         if "list" in url: # if its a playlist, we need to get all videos individually
             print "There is a playlist url, do you want to download it?"
